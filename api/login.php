@@ -35,6 +35,14 @@ try {
 
     // Verifikasi user dan password yang dienkripsi
     if ($user && password_verify($password, $user['password'])) {
+        
+        // --- MULAI PENYIMPANAN SESSION PHP ---
+        session_start();
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['role'] = $user['role'];
+        $_SESSION['nama_lengkap'] = $user['nama_lengkap'];
+        // -------------------------------------
+
         // Login sukses, kirim data profil ringkas (tanpa password)
         echo json_encode([
             'status' => 'success',
