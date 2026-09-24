@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Mathventure Prambanan</title>
+
+    <!-- CDN Bootstrap 5 (Untuk Layout UI) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- CDN SweetAlert2 (Untuk Pop-up Notifikasi) -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.12/dist/sweetalert2.min.css" rel="stylesheet">
+    <!-- CSS Kustom -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        /* Custom styling khusus halaman login */
+        body {
+            /* Memusatkan konten persis di tengah layar */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: var(--color-sky-light);
+        }
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 15px;
+            border: none;
+            border-top: 5px solid var(--color-gold); /* Aksen garis emas di atas */
+        }
+        .btn-login {
+            background-color: var(--color-sogan);
+            color: var(--color-white);
+            border: none;
+            transition: 0.3s;
+        }
+        .btn-login:hover {
+            background-color: var(--color-nila);
+            color: var(--color-white);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Layout Center-Aligned Card -->
+    <div class="card shadow-lg p-4 login-card">
+        <div class="text-center mb-4">
+            <!-- Tempat Logo Visual (Sementara menggunakan teks) -->
+            <h2 style="color: var(--color-nila); font-weight: bold; margin-bottom: 0;">Mathventure</h2>
+            <h5 style="color: var(--color-sogan);">Prambanan</h5>
+            <p class="text-muted mt-2">Masuk untuk memulai eksplorasi</p>
+        </div>
+
+        <!-- Form Login -->
+        <form id="loginForm">
+            <div class="mb-3">
+                <label for="identifier" class="form-label fw-bold">NIS / Username</label>
+                <input type="text" class="form-control" id="identifier" placeholder="Masukkan NIS atau Username" required>
+            </div>
+            <div class="mb-4">
+                <label for="password" class="form-label fw-bold">Kata Sandi</label>
+                <input type="password" class="form-control" id="password" placeholder="Masukkan Kata Sandi" required>
+            </div>
+            <button type="submit" class="btn btn-login w-100 py-2 fw-bold">MASUK</button>
+        </form>
+    </div>
+
+    <!-- Script Bootstrap & SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.12/dist/sweetalert2.all.min.js"></script>
+    
+    <!-- Handler API Global -->
+    <script src="js/api-handler.js"></script>
+
+    <!-- Logika Khusus Halaman Login -->
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); // Mencegah reload halaman bawaan browser
+
+            // 1. Ambil nilai ketikan pengguna
+            const identifier = document.getElementById('identifier').value;
+            const password = document.getElementById('password').value;
+
+            // 2. Munculkan loading spinner
+            Swal.fire({
+                title: 'Memeriksa kredensial...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // 3. Panggil API backend menggunakan fetchAPI
+            const result = await fetchAPI('login.php', 'POST', { 
+                identifier: identifier, 
+                password: password 
+            });
+
+            // 4. Tangani respons API
+            if (result.status === 'success') {
+                // Tampilkan notifikasi berhasil
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil Masuk!',
+                    text: 'Selamat datang.',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    // Logika redirect berdasarkan Role
+                    const role = result.data ? result.data.role : result.role; // Menyesuaikan format JSON backend
+                    
+                    if (role === 'siswa') {
+                        window.location.href = 'hub.html';
+                    } else if (role === 'peneliti') {
+                        window.location.href = 'dasbor.html';
+                    }
+                });
+            } else {
+                // 5. Tangani error visual (Sandi/NIS salah)
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Akses Ditolak',
+                    text: result.message || 'NIS atau Kata Sandi salah!',
+                    confirmButtonColor: 'var(--color-sogan)'
+                });
+            }
+        });
+    </script>
+</body>
+</html>
