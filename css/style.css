@@ -1,0 +1,22 @@
+/* css/style.css */
+:root {
+    /* Palet Warna Utama */
+    --color-sky-indigo: #4F46E5; /* Biru langit/Indigo cerah untuk UI ramah */
+    --color-sky-light: #E0E7FF;  /* Latar belakang cerah */
+    --color-sogan: #5D4037;      /* Cokelat tanah/kayu khas candi & batik */
+    --color-gold: #FFC107;       /* Emas untuk highlight, koin, dan skor XP */
+    --color-nila: #311B92;       /* Biru gelap (Nila) untuk teks tebal/header */
+    
+    /* Warna Netral */
+    --color-white: #FFFFFF;
+    --color-dark: #1F2937;
+    --color-gray: #9CA3AF;
+}
+
+body {
+    background-color: var(--color-sky-light);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--color-dark);
+    margin: 0;
+    padding: 0;
+}
