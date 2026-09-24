@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peta Candi - Mathventure Prambanan</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome (Untuk Ikon Gembok) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS Kustom -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        body {
+            background-color: var(--color-sky-light);
+            /* Opsional: Tambahkan gambar background candi siang hari di sini nanti */
+            /* background-image: url('assets/img/bg-candi.jpg'); */
+            /* background-size: cover; */
+        }
+        
+        .navbar-custom {
+            background-color: var(--color-sogan);
+            color: var(--color-white);
+        }
+
+        .room-card {
+            border-radius: 15px;
+            border: 2px solid transparent;
+            transition: transform 0.3s, box-shadow 0.3s;
+            background-color: var(--color-white);
+            cursor: pointer;
+        }
+
+        .room-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        /* Status Ruangan Terkunci */
+        .room-locked {
+            opacity: 0.6;
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        .room-locked:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .icon-large {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .color-gold { color: var(--color-gold); }
+        .color-gray { color: var(--color-gray); }
+    </style>
+</head>
+<body>
+
+    <!-- Bilah Navigasi Atas -->
+    <nav class="navbar navbar-custom shadow-sm p-3 mb-5">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <h4 class="mb-0 fw-bold"><i class="fas fa-map-marked-alt me-2"></i> Peta Eksplorasi</h4>
+            <div class="d-flex align-items-center">
+                <span class="me-3 fw-bold" id="studentName">Halo, Siswa!</span>
+                <span class="badge bg-warning text-dark me-3" id="progressBadge">Progress: 0/5</span>
+                <button class="btn btn-sm btn-danger" onclick="logout()">Keluar</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Konten Utama (Grid Ruangan) -->
+    <div class="container">
+        <div class="row text-center" id="roomGrid">
+            <!-- Kartu ruangan akan di-render menggunakan JavaScript di sini -->
+            <div class="col-12">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Memuat...</span>
+                </div>
+                <p class="mt-2">Memuat Peta Candi...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api-handler.js"></script>
+
+    <script>
+        // Simulasi jumlah total ruangan teka-teki
+        const TOTAL_ROOMS = 5; 
+        // Simulasi level yang sudah terbuka (Nanti bisa diubah menarik data dari backend)
+        let unlockedRooms = 1; 
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderRooms();
+            // Catatan: Di tahap lanjut, kita bisa panggil API untuk mengecek progress aktual siswa
+            // let response = await fetchAPI('get_progress.php');
+            // unlockedRooms = response.data.level;
+        });
+
+        // Fungsi mencetak kartu ruangan secara dinamis
+        function renderRooms() {
+            const grid = document.getElementById('roomGrid');
+            grid.innerHTML = ''; // Bersihkan loading spinner
+
+            for (let i = 1; i <= TOTAL_ROOMS; i++) {
+                const isLocked = i > unlockedRooms;
+                const cardClass = isLocked ? 'room-card room-locked p-4' : 'room-card p-4';
+                const iconClass = isLocked ? 'fas fa-lock icon-large color-gray' : 'fas fa-door-open icon-large color-gold';
+                const titleColor = isLocked ? 'text-muted' : 'text-primary';
+                const action = isLocked ? '' : `onclick="enterRoom(${i})"`;
+
+                const html = `
+                    <div class="col-md-4 col-sm-6 mb-4">
+                        <div class="${cardClass} shadow-sm" ${action}>
+                            <i class="${iconClass}"></i>
+                            <h4 class="${titleColor} fw-bold">Ruang ${i}</h4>
+                            <p class="text-muted mb-0">${isLocked ? 'Terkunci' : 'Tersedia'}</p>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += html;
+            }
+
+            // Update Progress Badge
+            document.getElementById('progressBadge').innerText = `Progress: ${unlockedRooms - 1}/${TOTAL_ROOMS}`;
+        }
+
+        // Fungsi masuk ke ruangan
+        function enterRoom(roomId) {
+            // Arahkan ke halaman game dengan membawa parameter level
+            window.location.href = `game.html?level=${roomId}`;
+        }
+
+        // Fungsi Logout
+        async function logout() {
+            const result = await fetchAPI('logout.php', 'POST');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
