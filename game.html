@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruang Puzzle - Mathventure Prambanan</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.12/dist/sweetalert2.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS Kustom -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Spline 3D Viewer -->
+    <script type="module" src="https://unpkg.com/@splinetool/viewer@1.0.51/build/spline-viewer.js"></script>
+
+    <style>
+        /* Mengunci layar agar tidak bisa di-scroll (fullscreen) */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* 1. Spline 3D di Background (z-index terendah) */
+        spline-viewer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1; 
+        }
+
+        /* 2. Lapisan UI di Atas 3D (z-index tinggi) */
+        .ui-layer {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            pointer-events: none; /* Agar klik bisa tembus ke 3D di area kosong */
+        }
+
+        /* Elemen UI yang bisa diklik */
+        .clickable {
+            pointer-events: auto; 
+        }
+
+        /* Panel Puzzle dengan efek Kaca (Glassmorphism) */
+        .puzzle-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 2px solid var(--color-gold);
+            padding: 30px;
+            max-width: 500px;
+            margin: 0 auto 30px auto;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .btn-check-answer {
+            background-color: var(--color-nila);
+            color: white;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn-check-answer:hover {
+            background-color: var(--color-sogan);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- KANVAS 3D SPLINE -->
+    <!-- GANTI URL di bawah ini dengan URL file Spline 3D Candi buatan tim kalian nanti -->
+    <spline-viewer url="https://prod.spline.design/6Wq1Q7YGyM-iab9i/scene.splinecode"></spline-viewer>
+
+    <!-- LAPISAN ANTARMUKA (UI) MENGAMBANG -->
+    <div class="ui-layer">
+        
+        <!-- Bar Atas -->
+        <div class="top-bar d-flex justify-content-between clickable">
+            <a href="hub.html" class="btn btn-light shadow-sm fw-bold">
+                <i class="fas fa-arrow-left me-2"></i> Kembali ke Peta
+            </a>
+            <div class="badge bg-dark fs-5 shadow-sm">
+                <i class="fas fa-gem text-warning me-2"></i> <span id="xpDisplay">XP: 0</span>
+            </div>
+        </div>
+
+        <!-- Panel Puzzle Bawah -->
+        <div class="puzzle-panel clickable" id="puzzleContainer" style="display: none;">
+            <h5 class="text-muted mb-3"><i class="fas fa-scroll"></i> Gulungan Rahasia Prambanan</h5>
+            
+            <!-- Tempat Soal Muncul -->
+            <h2 id="puzzleText" class="fw-bold mb-4" style="color: var(--color-nila); letter-spacing: 2px;">
+                <!-- Contoh: 2, 4, 6, 8, ... -->
+                Memuat teka-teki...
+            </h2>
+
+            <form id="answerForm">
+                <div class="input-group mb-3">
+                    <!-- Input HANYA ANGKA (type="number") -->
+                    <input type="number" id="answerInput" class="form-control form-control-lg text-center fw-bold" placeholder="Ketik angka selanjutnya..." required>
+                </div>
+                <button type="submit" class="btn btn-check-answer w-100 py-2 fs-5">CEK JAWABAN</button>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.12/dist/sweetalert2.all.min.js"></script>
+    <script src="js/api-handler.js"></script>
+
+    <script>
+        // Variabel penampung data game
+        let activeSessionId = null;
+        let activePuzzleId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Munculkan Pop-up Intro saat halaman pertama kali dibuka
+            Swal.fire({
+                title: 'Gerbang Candi Terkunci!',
+                text: 'Misi kamu adalah memecahkan pola bilangan peninggalan Rakai Pikatan. Perhatikan polanya dan tebak angka rahasia selanjutnya.',
+                imageUrl: 'https://cdn-icons-png.flaticon.com/512/3067/3067341.png', // Ikon dummy
+                imageWidth: 100,
+                confirmButtonText: 'Mulai Tantangan',
+                confirmButtonColor: 'var(--color-sogan)',
+                allowOutsideClick: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    startGameSession();
+                }
+            });
+        });
+
+        // 2. Fungsi Memulai Sesi (Fetch ke start_session.php)
+        async function startGameSession() {
+            // Note: API start_session.php mem-buat sesi di database
+            const result = await fetchAPI('start_session.php', 'POST');
+            
+            // Asumsi backend mengembalikan session_id
+            if(result.status === 'success' || result.session_id) {
+                activeSessionId = result.session_id || result.data?.session_id;
+                document.getElementById('puzzleContainer').style.display = 'block';
+                loadPuzzleData();
+            } else {
+                Swal.fire('Error', 'Gagal memulai sesi. Coba muat ulang.', 'error');
+            }
+        }
+
+        // 3. Fungsi Menarik Data Puzzle
+        async function loadPuzzleData() {
+            const result = await fetchAPI('get_puzzles.php');
+            if (result.status === 'success' && result.data.length > 0) {
+                // Ambil soal pertama (Nanti bisa disesuaikan dengan logika level/ID ruangan)
+                const puzzle = result.data[0]; 
+                activePuzzleId = puzzle.id;
+                
+                // Asumsi kolom soal di MySQL bernama 'pertanyaan' atau 'pola_bilangan'
+                document.getElementById('puzzleText').innerText = puzzle.pertanyaan || puzzle.pola_bilangan || "2, 4, 6, 8, ...";
+            }
+        }
+
+        // 4. Logika Tombol CEK JAWABAN
+        document.getElementById('answerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const answer = document.getElementById('answerInput').value;
+
+            // Loading Spinner
+            Swal.fire({ title: 'Menyinkronkan Batu Candi...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+            // Fetch ke submit_answer.php
+            const result = await fetchAPI('submit_answer.php', 'POST', {
+                session_id: activeSessionId,
+                puzzle_id: activePuzzleId,
+                jawaban_siswa: answer
+            });
+
+            // 5. Animasi Benar / Salah
+            if (result.status === 'success') {
+                if (result.is_correct) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'BENAR!',
+                        text: 'Mekanisme candi berputar, pintu ruangan ini telah terbuka!',
+                        confirmButtonColor: 'var(--color-gold)'
+                    }).then(() => {
+                        // Jika ada level selanjutnya, muat puzzle baru. 
+                        // Untuk simulasi ini, kita anggap selesai dan jalankan Game Cleared
+                        triggerGameCleared();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'SALAH!',
+                        text: 'Batu candi bergetar... Jawabanmu keliru. Coba amati polanya lagi!',
+                        confirmButtonColor: 'var(--color-nila)'
+                    });
+                    document.getElementById('answerInput').value = ''; // Kosongkan input
+                }
+            } else {
+                Swal.fire('Error', 'Terjadi kesalahan sistem.', 'error');
+            }
+        });
+
+        // 6. Fungsi Pamer Skor Akhir (Game Cleared)
+        async function triggerGameCleared() {
+            const result = await fetchAPI('finish_game.php', 'POST', { session_id: activeSessionId });
+            
+            if (result.status === 'success') {
+                let totalXp = result.data ? result.data.total_skor : 100; // Fallback jika format data beda
+                
+                Swal.fire({
+                    title: '🎉 GAME CLEARED! 🎉',
+                    html: `Luar biasa! Kamu berhasil menaklukkan tantangan Mathventure Prambanan.<br><br><b style="font-size: 24px; color: var(--color-gold);">Total XP: ${totalXp}</b>`,
+                    icon: 'success',
+                    confirmButtonText: 'Kembali ke Peta',
+                    confirmButtonColor: 'var(--color-sogan)',
+                    allowOutsideClick: false
+                }).then(() => {
+                    window.location.href = 'hub.html';
+                });
+            }
+        }
+    </script>
+</body>
+</html>
